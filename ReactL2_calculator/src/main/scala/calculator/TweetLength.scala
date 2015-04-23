@@ -18,7 +18,7 @@ object TweetLength {
     Signal{
       if(remainingCharsCount() >= 15)
         GREEN
-      else if(remainingCharsCount() > 0 && 14 >= remainingCharsCount())
+      else if(remainingCharsCount() >= 0 && 14 >= remainingCharsCount())
         ORANGE
       else
         RED
