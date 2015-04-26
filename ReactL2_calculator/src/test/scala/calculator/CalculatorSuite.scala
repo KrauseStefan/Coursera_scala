@@ -56,8 +56,7 @@ class CalculatorSuite extends FunSuite with ShouldMatchers {
     assert(resDelta1() == -3)
 
     val resSol1 = Polynomial.computeSolutions(Var(1), Var(1), Var(1), resDelta1)
-    assert(resSol1().head.isNaN)
-    assert(resSol1().last.isNaN)
+    assert(resSol1() == Set.empty)
 
 
     val resDelta2 = Polynomial.computeDelta(Var(2), Var(3), Var(0))

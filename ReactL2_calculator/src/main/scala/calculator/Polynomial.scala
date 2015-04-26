@@ -13,7 +13,7 @@ object Polynomial {
 
     Signal {
       if (delta() < 0 | a() == 0) {
-        Set(Double.NaN, Double.NaN)
+        Set.empty
       } else if (delta() == 0) {
         Set((-b() + Math.sqrt(delta())) /
           (2 * a())
@@ -21,7 +21,8 @@ object Polynomial {
       } else {
         Set(
           (-b() + Math.sqrt(delta())) /
-            (2 * a()),
+            (2 * a())
+          ,
           (-b() - Math.sqrt(delta())) /
             (2 * a())
         )
