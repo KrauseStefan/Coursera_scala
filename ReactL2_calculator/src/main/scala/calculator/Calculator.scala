@@ -10,7 +10,7 @@ final case class Divide(a: Expr, b: Expr) extends Expr
 
 object Calculator {
   def computeValues(namedExpressions: Map[String, Signal[Expr]]): Map[String, Signal[Double]] = {
-    var result: Map[String, Signal[Double]] = Map.empty
+//    var result: Map[String, Signal[Double]] = Map.empty
 
     for (
       (key, expr) <- namedExpressions
@@ -29,8 +29,11 @@ object Calculator {
     expr match {
       case Literal(l) =>
         l
-      case Ref(r) =>
-        eval(references(r)(), references)
+      case Ref(refName) =>
+        if(references.contains(refName))
+          eval(references(refName)(), references - refName)
+        else
+          Double.NaN
       case Plus(a, b) =>
         eval(a, references) + eval(b, references)
       case Minus(a, b) =>
