@@ -107,9 +107,7 @@ package object nodescala {
       val cts = new CancellationTokenSource {
         var isCanceled = false
         val cancellationToken = new CancellationToken {
-          override def isCancelled: Boolean = {
-            isCanceled
-          }
+          override def isCancelled: Boolean = isCanceled
         }
 
         override def unsubscribe(): Unit = {

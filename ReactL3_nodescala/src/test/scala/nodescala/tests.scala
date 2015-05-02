@@ -167,29 +167,32 @@ class NodeScalaSuite extends FunSuite {
   }
 
 
-//  test("Future.run should allow stopping the computation") {
-//    var isWorking = false
-//    val working = Future.run() { ct =>
-//      Future {
-//        while (ct.nonCancelled) {
-//          isWorking = true
-//        }
-//        isWorking = false
-//      }
-//    }
-//    val done = Future.delay(100 milli).andThen({
-//      case _ => working.unsubscribe()
-//    })
-//    assert(isWorking == true)
-//
-//    try {
-//      Await.result(done, 200 milli)
-//      assert(isWorking == false)
-//    } catch {
-//      case t: TimeoutException => assert(false)
-//    }
-//
-//  }
+  test("Future.run should allow stopping the computation") {
+    var isWorking = false
+    val working = Future.run() { ct =>
+      Future {
+        while (ct.nonCancelled) {
+          isWorking = true
+          Thread.sleep(1)
+        }
+        isWorking = false
+//        println("done")
+      }
+    }
+    val done = Future.delay(100 milli).andThen({
+      case _ => working.unsubscribe()
+    })
+
+    try {
+      assert(isWorking == true)
+      Await.result(done, 200 milli)
+      Thread.sleep(100)
+      assert(isWorking == false)
+    } catch {
+      case t: TimeoutException => assert(false)
+    }
+
+  }
 
   test("CancellationTokenSource should allow stopping the computation") {
     val cts = CancellationTokenSource()
