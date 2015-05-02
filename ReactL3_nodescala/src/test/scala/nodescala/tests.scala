@@ -1,5 +1,7 @@
 package nodescala
 
+import java.util.concurrent.ExecutionException
+
 import scala.language.postfixOps
 import scala.util.{Try, Success, Failure}
 import scala.collection._
@@ -31,6 +33,164 @@ class NodeScalaSuite extends FunSuite {
     }
   }
 
+  test("Future.all should be completed with the right results in the right order") {
+    val testList = (0 to 10).toList
+
+    val futures = for (data <- testList)
+      yield Future[Int](data)
+
+    assert(Await.result(Future.all(futures), 1 second) == testList)
+  }
+
+  test("Future.all should return a failed future if a element fails 1") {
+    val exception = new ExecutionException(new Throwable("test"))
+    val failedFuture = Future.failed(exception)
+
+    val futures = for (data <- 0 to 10)
+      yield Future[Int](data)
+
+    val failedFutures = failedFuture +: futures
+
+    try {
+      Await.result(Future.all(failedFutures.toList), 1 second)
+      assert(false)
+    } catch {
+      case t1: TimeoutException => assert(false)
+      case t2: ExecutionException => // ok!
+    }
+  }
+
+  test("Future.all should return a failed future if a element fails 2") {
+    val exception = new ExecutionException(new Throwable("test"))
+    val failedFuture = Future.failed(exception)
+
+    val futures = for (data <- 0 to 10)
+      yield Future[Int](data)
+
+    val failedFutures = futures :+ failedFuture
+
+    try {
+      Await.result(Future.all(failedFutures.toList), 1 second)
+      assert(false)
+    } catch {
+      case t1: TimeoutException => assert(false)
+      case t2: ExecutionException => // ok!
+    }
+  }
+
+  test("Future.all should never resolve if none are completed") {
+    val futures = for (x <- 0 to 10)
+      yield Future.never[Int]
+
+    try {
+      Await.result(Future.all(futures.toList), 1 second)
+      assert(false)
+    } catch {
+      case t: TimeoutException => // ok!
+    }
+  }
+
+  test("Future.any should return the first resolved future from the list 1") {
+    val futures = List.empty :+ Future {
+      10
+    }
+
+    assert(Await.result(Future.any(futures), 1 second) == 10)
+  }
+
+  test("Future.any should return the first resolved future from the list 2") {
+    val futures = List.empty :+ Future {
+      10
+    } :+ Future {
+      12
+    }
+
+    assert(Await.result(Future.any(futures), 1 second) == 10)
+  }
+
+  test("Future.any should return the first resolved future from the list 3") {
+    val futures = List.empty :+ Future.never :+ Future {
+      12
+    }
+
+    assert(Await.result(Future.any(futures), 1 second) == 12)
+  }
+
+  test("Future.any should return a failed future if a element fails") {
+    val testList = (0 to 10).toList
+
+    val exception = new ExecutionException(new Throwable("test"))
+    val failedFuture = Future.failed(exception)
+
+    val futures = for (data <- testList)
+      yield Future[Int](data)
+
+    val failedFutures = futures :+ failedFuture
+
+    try {
+      Await.result(Future.all(failedFutures), 1 second)
+      assert(false)
+    } catch {
+      case t1: TimeoutException => assert(false)
+      case t2: ExecutionException => // ok!
+    }
+  }
+
+  test("Future.any should never resolve if none are completed") {
+    val futures = for (x <- 0 to 10)
+      yield Future.never[Int]
+
+    try {
+      Await.result(Future.any(futures.toList), 1 second)
+      assert(false)
+    } catch {
+      case t: TimeoutException => // ok!
+    }
+  }
+
+  test("Future.delay should not resolve before timeout has been reached") {
+    try {
+      Await.result(Future.delay(1 second), 100 milli)
+      assert(false)
+    } catch {
+      case t: TimeoutException => // ok!
+    }
+  }
+
+  test("Future.delay should resolve after timeout has been reached") {
+    try {
+      Await.result(Future.delay(100 milli), 500 milli)
+      assert(true)
+    } catch {
+      case t: TimeoutException => assert(false)
+    }
+  }
+
+
+//  test("Future.run should allow stopping the computation") {
+//    var isWorking = false
+//    val working = Future.run() { ct =>
+//      Future {
+//        while (ct.nonCancelled) {
+//          isWorking = true
+//        }
+//        isWorking = false
+//      }
+//    }
+//    val done = Future.delay(100 milli).andThen({
+//      case _ => working.unsubscribe()
+//    })
+//    assert(isWorking == true)
+//
+//    try {
+//      Await.result(done, 200 milli)
+//      assert(isWorking == false)
+//    } catch {
+//      case t: TimeoutException => assert(false)
+//    }
+//
+//  }
+
   test("CancellationTokenSource should allow stopping the computation") {
     val cts = CancellationTokenSource()
     val ct = cts.cancellationToken
@@ -51,9 +211,11 @@ class NodeScalaSuite extends FunSuite {
   class DummyExchange(val request: Request) extends Exchange {
     @volatile var response = ""
     val loaded = Promise[String]()
+
     def write(s: String) {
       response += s
     }
+
     def close() {
       loaded.success(response)
     }
@@ -106,6 +268,7 @@ class NodeScalaSuite extends FunSuite {
       l.emit(req)
     }
   }
+
   test("Server should serve requests") {
     val dummy = new DummyServer(8191)
     val dummySubscription = dummy.start("/testDir") {
