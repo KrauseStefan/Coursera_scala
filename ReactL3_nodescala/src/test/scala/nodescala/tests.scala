@@ -1,5 +1,6 @@
 package nodescala
 
+import java.util.NoSuchElementException
 import java.util.concurrent.ExecutionException
 
 import scala.language.postfixOps
@@ -173,10 +174,8 @@ class NodeScalaSuite extends FunSuite {
       Future {
         while (ct.nonCancelled) {
           isWorking = true
-          Thread.sleep(1)
         }
         isWorking = false
-//        println("done")
       }
     }
     val done = Future.delay(100 milli).andThen({
@@ -209,6 +208,44 @@ class NodeScalaSuite extends FunSuite {
 
     cts.unsubscribe()
     assert(Await.result(p.future, 1 second) == "done")
+  }
+
+  test("Future.now should return the result of the promise immediately") {
+    val f = Future{10}
+
+    assert(f.now == 10)
+  }
+
+  test("Future.now should throw an exception if future is not resolved") {
+    val p = Promise[Int]()
+
+    try{
+      p.future.now
+      assert(false)
+    }catch {
+      case t: NoSuchElementException => assert(true)
+      case _: Throwable => assert(false)
+    }
+  }
+
+  test("Future.continueWith should map the current feature into a new feature of a different type") {
+    val f1 = Future[String]{"234"}
+
+    val f2 = f1.continueWith((f) => {
+      f.now.toInt
+    })
+
+    assert(Await.result(f2, 1 milli) == 234)
+  }
+
+  test("Future.continue should map the current feature into a new feature of a different type") {
+    val f1 = Future[String]{"234"}
+
+    val f2 = f1.continue((f) => {
+      f.get.toInt
+    })
+
+    assert(Await.result(f2, 1 milli) == 234)
   }
 
   class DummyExchange(val request: Request) extends Exchange {

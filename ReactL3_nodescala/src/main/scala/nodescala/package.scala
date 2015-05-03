@@ -1,3 +1,5 @@
+import java.util.NoSuchElementException
+
 import scala.language.postfixOps
 import scala.io.StdIn
 import scala.util._
@@ -105,13 +107,13 @@ package object nodescala {
     def run()(f: CancellationToken => Future[Unit]): Subscription = {
 
       val cts = new CancellationTokenSource {
-        var isCanceled = false
+        var p = Promise[Unit]()
         val cancellationToken = new CancellationToken {
-          override def isCancelled: Boolean = isCanceled
+          def isCancelled = p.future.value != None
         }
 
         override def unsubscribe(): Unit = {
-          isCanceled = true
+          p.trySuccess(())
         }
       }
 
@@ -133,7 +135,12 @@ package object nodescala {
      *  However, it is also non-deterministic -- it may throw or return a value
      *  depending on the current state of the `Future`.
      */
-    def now: T = ???
+    def now: T = {
+      if(f.isCompleted)
+        Await.result(f, 0 nano)
+      else
+        throw new NoSuchElementException
+    }
 
     /** Continues the computation of this future by taking the current future
      *  and mapping it into another future.
@@ -141,7 +148,14 @@ package object nodescala {
      *  The function `cont` is called only after the current future completes.
      *  The resulting future contains a value returned by `cont`.
      */
-    def continueWith[S](cont: Future[T] => S): Future[S] = ???
+    def continueWith[S](cont: Future[T] => S): Future[S] = {
+      val p = Promise[S]()
+      f onComplete((t: Try[T]) => {
+        p.success(cont(f))
+      })
+
+      p.future
+    }
 
     /** Continues the computation of this future by taking the result
      *  of the current future and mapping it into another future.
@@ -149,7 +163,14 @@ package object nodescala {
      *  The function `cont` is called only after the current future completes.
      *  The resulting future contains a value returned by `cont`.
      */
-    def continue[S](cont: Try[T] => S): Future[S] = ???
+    def continue[S](cont: Try[T] => S): Future[S] = {
+      val p = Promise[S]()
+      f onComplete((t: Try[T]) => {
+        p.success(cont(t))
+      })
+
+      p.future
+    }
 
   }
 
