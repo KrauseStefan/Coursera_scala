@@ -117,7 +117,7 @@ package object nodescala {
         }
       }
 
-      f(cts.cancellationToken)
+      f(cts.cancellationToken) onComplete( (t) => { cts.unsubscribe()})
       cts
     }
 
@@ -151,7 +151,11 @@ package object nodescala {
     def continueWith[S](cont: Future[T] => S): Future[S] = {
       val p = Promise[S]()
       f onComplete((t: Try[T]) => {
-        p.success(cont(f))
+        try{
+          p.success(cont(f))
+        }catch {
+          case e: Throwable => p.failure(e)
+        }
       })
 
       p.future
@@ -165,8 +169,16 @@ package object nodescala {
      */
     def continue[S](cont: Try[T] => S): Future[S] = {
       val p = Promise[S]()
+//      f onComplete {
+//        case Success(value) => p.success(cont(Try{value}))
+//        case Failure(e) => p.failure(e)
+//      }
       f onComplete((t: Try[T]) => {
-        p.success(cont(t))
+        try{
+          p.success(cont(t))
+        }catch {
+          case e: Throwable => p.failure(e)
+        }
       })
 
       p.future

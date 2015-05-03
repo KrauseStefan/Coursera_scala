@@ -235,7 +235,40 @@ class NodeScalaSuite extends FunSuite {
       f.now.toInt
     })
 
-    assert(Await.result(f2, 1 milli) == 234)
+    assert(Await.result(f2, 1 second) == 234)
+  }
+
+  test("Future.continueWith should handle exceptions1") {
+    val f1 = Future[String]{"234"}
+
+    val f2 = f1.continueWith((f) => {
+      throw new IllegalStateException
+      f.now.toInt
+    })
+
+    try{
+      Await.result(f2, 1 second)
+      assert(false)
+    }catch {
+      case e: IllegalStateException => assert(true)
+      case t: Throwable => assert(false)
+    }
+  }
+
+  test("Future.continueWith should handle exceptions2") {
+    val f1 = Future.failed[String](new IllegalStateException)
+
+    val f2 = f1.continueWith((f) => {
+      f.now.toInt
+    })
+
+    try{
+      Await.result(f2, 1 second)
+      assert(false)
+    }catch {
+      case e: IllegalStateException => assert(true)
+      case t: Throwable => assert(false)
+    }
   }
 
   test("Future.continue should map the current feature into a new feature of a different type") {
@@ -245,7 +278,40 @@ class NodeScalaSuite extends FunSuite {
       f.get.toInt
     })
 
-    assert(Await.result(f2, 1 milli) == 234)
+    assert(Await.result(f2, 1 second) == 234)
+  }
+
+  test("Future.continue should handle exceptions1") {
+    val f1 = Future[String]{"234"}
+
+    val f2 = f1.continue((f) => {
+      throw new IllegalStateException
+      f.get.toInt
+    })
+
+    try{
+      Await.result(f2, 1 second)
+      assert(false)
+    }catch {
+      case e: IllegalStateException => assert(true)
+      case t: Throwable => assert(false)
+    }
+  }
+
+  test("Future.continue should handle exceptions2") {
+    val f1 = Future.failed[String](new IllegalStateException)
+
+    val f2 = f1.continue((f) => {
+      f.get.toInt
+    })
+
+    try{
+      Await.result(f2, 1 second)
+      assert(false)
+    }catch {
+      case e: IllegalStateException => assert(true)
+      case t: Throwable => assert(false)
+    }
   }
 
   class DummyExchange(val request: Request) extends Exchange {
