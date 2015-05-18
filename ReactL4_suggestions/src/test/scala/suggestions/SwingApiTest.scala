@@ -15,6 +15,7 @@ import gui._
 import org.junit.runner.RunWith
 import org.scalatest.junit.JUnitRunner
 
+
 @RunWith(classOf[JUnitRunner])
 class SwingApiTest extends FunSuite {
 
@@ -67,7 +68,7 @@ class SwingApiTest extends FunSuite {
   }
 
   import swingApi._
-  
+
   test("SwingApi should emit text field values to the observable") {
     val textField = new swingApi.TextField
     val values = textField.textValues

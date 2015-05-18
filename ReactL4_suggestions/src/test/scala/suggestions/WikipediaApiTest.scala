@@ -50,6 +50,46 @@ class WikipediaApiTest extends FunSuite {
     )
     assert(completed && count == 3, "completed: " + completed + ", event count: " + count)
   }
+
+  test("WikipediaApi sanitize should replace space with underscore") {
+
+    val testDataInput = Observable.just("erik", "erik meijer", "martin")
+    val testDataOutput = List("erik", "erik_meijer", "martin")
+
+    val testData = testDataInput.sanitized.toBlocking.toList
+
+    assert(testData.equals(testDataOutput), testData)
+  }
+
+  test("WikipediaApi recovered should wrap every element in a Try") {
+
+    val exception = new Exception
+    val testDataInput = Observable.just("erik", "erik meijer", "martin", Unit, "martin")
+    val testDataOutput = List(Success("erik"), Success("erik meijer"), Success("martin"), Failure(exception))
+
+
+    val testData = testDataInput.map(x => {
+      if(x == Unit){
+        throw exception
+      }
+      x
+    }).recovered.toBlocking.toList
+
+    assert(testData.equals(testDataOutput), testData)
+  }
+
+  test("WikipediaApi timedOut should automatically close the observable stream") {
+
+    val testDataInput = Observable.interval(180 millisecond)
+    val testDataOutput = List(0, 1, 2, 3, 4)
+    var completed = false
+
+    val testData = testDataInput.timedOut(1).doOnCompleted({completed = true})
+
+    assert(testData.toBlocking.toList.equals(testDataOutput), testData)
+    assert(completed == true, ": Stream was not closed")
+  }
+
   test("WikipediaApi should correctly use concatRecovered") {
     val requests = Observable.just(1, 2, 3)
     val remoteComputation = (n: Int) => Observable.just(0 to n : _*)

@@ -4,7 +4,9 @@ package gui
 import scala.collection.mutable.ListBuffer
 import scala.collection.JavaConverters._
 import scala.concurrent._
+import scala.concurrent.duration._
 import scala.concurrent.ExecutionContext.Implicits.global
+import scala.language.postfixOps
 import scala.swing._
 import scala.util.{ Try, Success, Failure }
 import scala.swing.event._
@@ -81,29 +83,52 @@ object WikipediaSuggest extends SimpleSwingApplication with ConcreteSwingApi wit
      */
 
     // TO IMPLEMENT
-    val searchTerms: Observable[String] = ???
-
-    // TO IMPLEMENT
-    val suggestions: Observable[Try[List[String]]] = ???
-
-    // TO IMPLEMENT
-    val suggestionSubscription: Subscription =  suggestions.observeOn(eventScheduler) subscribe {
-      x => ???
+    val searchTerms: Observable[String] = {
+      searchTermField.textValues.debounce(50 millisecond)
     }
 
     // TO IMPLEMENT
-    val selections: Observable[String] = ???
+    val suggestions: Observable[Try[List[String]]] = {
+
+      searchTerms.sanitized.concatRecovered[List[String]]( (term) => {
+        Observable.from(wikipediaSuggestion(term)).timedOut(3)
+      })
+    }
 
     // TO IMPLEMENT
-    val pages: Observable[Try[String]] = ???
+    val suggestionSubscription: Subscription =  suggestions.observeOn(eventScheduler) subscribe { value => {
+        value match {
+          case Success(s) => suggestionList.listData = s
+          case Failure(f) => status.text = f.getMessage
+        }
+      }
+    }
+
+    // TO IMPLEMENT
+    val selections: Observable[String] = {
+      button.clicks.flatMap(x =>{
+        Observable.from(suggestionList.selection.items)
+      })
+    }
+
+    // TO IMPLEMENT
+    val pages: Observable[Try[String]] = {
+      selections.concatRecovered[String](x => {
+        Observable.from(wikipediaPage(x)).timedOut(3)
+      })
+    }
 
     // TO IMPLEMENT
     val pageSubscription: Subscription = pages.observeOn(eventScheduler) subscribe {
-      x => ???
+      x => {
+        x match {
+          case Success(s) => editorpane.text = s
+          case Failure(f) => status.text = f.getMessage
+        }
+      }
     }
 
   }
-
 }
 
 
